@@ -1,5 +1,9 @@
 variables.tf
 terraform.tfstate
 terraform.tfstate.backup
+<<<<<<< HEAD
 .terraform
 *.exe
+=======
+.terraform
+>>>>>>> 07a68b0b0a7c6c9e7fa8f52e21636e32d0ec9435
