@@ -25,7 +25,8 @@ resource "aws_instance" "joerod" {
     key_name = "${aws_key_pair.joerod.key_name}"
     vpc_security_group_ids = ["${aws_security_group.ssh.id}"]
     provisioner "local-exec" {
-    command = "echo ${aws_instance.joerod.public_ip} > ip_address.txt"
+    command = "Get-date | out-file -append ip_address.txt; ${aws_instance.joerod.public_ip} | out-file -append ip_address.txt"
+    interpreter = ["PowerShell", "-Command"]
    
   }
    tags = {
