@@ -22,7 +22,7 @@ resource "aws_security_group" "ssh" {
 resource "aws_instance" "joerod" {
     ami           = "ami-b374d5a5"
     instance_type = "t2.micro"
-    key_name = "${aws_key_pair.deployer.key_name}"
+    key_name = "${aws_key_pair.joerod.key_name}"
     vpc_security_group_ids = ["${aws_security_group.ssh.id}"]
     provisioner "local-exec" {
     command = "echo ${aws_instance.joerod.public_ip} > ip_address.txt"

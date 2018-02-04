@@ -3,4 +3,5 @@ terraform.tfstate
 terraform.tfstate.backup
 <<<<<<< HEAD
 .terraform
+key_pair.tf
 *.exe
