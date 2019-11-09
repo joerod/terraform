@@ -1,5 +1,8 @@
 variable "project_name" {
   description = "Project Name"
-  default     = "joes_project"
+  default     = [
+    "joes_project",
+    "Test"
+  ]
 }
 
