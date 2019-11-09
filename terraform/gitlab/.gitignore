@@ -1,0 +1,3 @@
+.terraform
+token_variable.tf
+terraform.tfstate
