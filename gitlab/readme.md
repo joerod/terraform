@@ -14,3 +14,14 @@ terraform import 'gitlab_project.joerod_project[\"joes_project\"]' 15255364
 terraform import 'gitlab_project.joerod_project[\"Test\"]' 12794887
 
 ```
+
+### Credentials
+
+I used another variable file with this to hold my Gitlab token
+
+```powershell
+variable "gitlab_token" {
+  description = "Gitlab Token"
+  default     = ""
+}
+```
