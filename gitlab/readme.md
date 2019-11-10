@@ -6,7 +6,7 @@ I want to manage my Gitlab projects via Terraform.  I need to import my current 
 
 ## How to use
 
-I had to import my existing projects before I ran `terraform apply` else Terraform may destroy my projects.  Importing when using a `for_each` in Terraform is a bit different.  See [this](https://www.terraform.io/docs/commands/import.html) at the bottom of the page for more info.
+I had to import my existing projects before I ran `terraform apply` else Terraform may destroy my projects.  Importing when using a `for_each in Terraform is a bit different.  See [this](https://www.terraform.io/docs/commands/import.html) at the bottom of the page for more info.
 
 ```powershell
 
