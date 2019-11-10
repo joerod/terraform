@@ -7,6 +7,7 @@ provider "gitlab" {
 resource "gitlab_project" "sample_project" {
   for_each = toset(var.project_name)
   name =  "${each.value}"
+  #name = "joes_project"
   approvals_before_merge  = 1
   only_allow_merge_if_all_discussions_are_resolved = true
   issues_enabled = true
