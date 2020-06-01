@@ -1,23 +1,6 @@
-variable "test_project_name" {
-  default = "test"
-}
-
-variable "test_developer" {
-  type    = list(string)
-  default = ["AmarOk1412",
-  "akem08"
-  ]
-}
-
-variable "test_maintainer" {
-  type    = list(string)
-  default = ["ohdamux"
-  ]
-}
-
 // Sets projects and settings
 resource "gitlab_project" "test_project" {
-  name         = var.test_project_name
+  name         = var.name_test_project
   namespace_id = gitlab_group.joerod.id
   approvals_before_merge  = 1
   only_allow_merge_if_all_discussions_are_resolved = true
