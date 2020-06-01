@@ -31,10 +31,7 @@ data "gitlab_user" "test_developer" {
   username = var.test_developer[count.index]
 }
 
-<<<<<<< HEAD
 // sets users who will be developers for the project
-=======
->>>>>>> b0ffd4a1fa5af0930102b498c19297ff7daffbb9
 resource "gitlab_project_membership" "test_developer" {
   count = length(data.gitlab_user.test_developer)
   project_id   = gitlab_project.test_project.id
@@ -47,10 +44,7 @@ data "gitlab_user" "test_maintainer" {
   username = var.test_maintainer[count.index]
 }
 
-<<<<<<< HEAD
 // sets users who will be maintainers for the project
-=======
->>>>>>> b0ffd4a1fa5af0930102b498c19297ff7daffbb9
 resource "gitlab_project_membership" "test_maintainer" {
   count = length(data.gitlab_user.test_maintainer)
   project_id   = gitlab_project.test_project.id
