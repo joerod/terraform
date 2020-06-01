@@ -15,6 +15,10 @@ terraform import 'gitlab_project.joerod_project[\"Test\"]' 12794887
 
 ```
 
+## Adding members to Gitlab group
+
+In the test_project.tf file I provide a list of Gitlab user names in a list.  I then iterate over the list to set developers and maintainers of the Gitlab group.
+
 ### Credentials
 
 I used another variable file with this to hold my Gitlab token

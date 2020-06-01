@@ -1,3 +1,16 @@
+variable "test_developer" {
+  type    = list(string)
+  default = ["AmarOk1412",
+  "akem08"
+  ]
+}
+
+variable "test_maintainer" {
+  type    = list(string)
+  default = ["ohdamux"
+  ]
+}
+
 // Sets projects and settings
 resource "gitlab_project" "test_project" {
   name         = "test"
@@ -9,12 +22,26 @@ resource "gitlab_project" "test_project" {
   initialize_with_readme = true
 }
 
-data "gitlab_user" "test_user" {
-  username = "dwrfg4wgtgh"
+data "gitlab_user" "test_developer" {
+  count = length(var.test_developer)
+  username = var.test_developer[count.index]
 }
 
-resource "gitlab_project_membership" "test" {
+resource "gitlab_project_membership" "test_developer" {
+  count = length(data.gitlab_user.test_developer)
   project_id   = gitlab_project.test_project.id
-  user_id      = data.gitlab_user.test_user.id
+  user_id      = data.gitlab_user.test_developer[count.index].id
   access_level = "developer"
+}
+
+data "gitlab_user" "test_maintainer" {
+  count = length(var.test_maintainer)
+  username = var.test_maintainer[count.index]
+}
+
+resource "gitlab_project_membership" "test_maintainer" {
+  count = length(data.gitlab_user.test_maintainer)
+  project_id   = gitlab_project.test_project.id
+  user_id      = data.gitlab_user.test_maintainer[count.index].id
+  access_level = "maintainer"
 }
