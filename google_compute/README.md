@@ -1,4 +1,4 @@
-# GCS
+# GCP
 
 Creates a simple Google Cloud Compute Windows VM
 
