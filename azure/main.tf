@@ -38,7 +38,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "joerod" {
   }
   data_source_id = azurerm_log_analytics_workspace.joerod.id
   description    = "Heartbeat"
-  enabled        = false
+  enabled        = true
   query       = <<-QUERY
     Heartbeat | summarize LastCall = max(TimeGenerated) by Computer | where LastCall < ago(5m)
   QUERY
