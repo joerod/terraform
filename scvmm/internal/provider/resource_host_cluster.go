@@ -184,6 +184,7 @@ func buildHostClusterCreateScript(data hostClusterResourceModel) string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("$group = Get-SCVMHostGroup -Name '%s'; ", escapeSingleQuotes(data.VMHostGroup.ValueString())))
 	b.WriteString(fmt.Sprintf("$cred = Get-SCRunAsAccount -Name '%s'; ", escapeSingleQuotes(data.RunAsAccount.ValueString())))
+	b.WriteString("if (-not $cred) { throw 'Run As account not found.' }; ")
 
 	args := []string{fmt.Sprintf("-Name '%s'", escapeSingleQuotes(data.Name.ValueString())), "-VMHostGroup $group", "-Credential $cred"}
 	if !data.Description.IsNull() && data.Description.ValueString() != "" {
@@ -286,6 +287,7 @@ func buildAddClusterNodesScript(data hostClusterResourceModel, nodes []string) s
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("$cluster = Get-SCVMHostCluster -Name '%s'; ", escapeSingleQuotes(data.Name.ValueString())))
 	b.WriteString(fmt.Sprintf("$cred = Get-SCRunAsAccount -Name '%s'; ", escapeSingleQuotes(data.RunAsAccount.ValueString())))
+	b.WriteString("if (-not $cred) { throw 'Run As account not found.' }; ")
 	for _, node := range nodes {
 		b.WriteString(fmt.Sprintf("Add-SCVMHost -ComputerName '%s' -VMHostCluster $cluster -Credential $cred; ", escapeSingleQuotes(node)))
 	}
