@@ -251,6 +251,10 @@ func buildCreateScript(data virtualMachineResourceModel) string {
 	b.WriteString(strings.Join(args, " "))
 	b.WriteString("; ")
 
+	if !data.HighlyAvailable.IsNull() && data.HighlyAvailable.ValueBool() {
+		b.WriteString("if (-not $vm.VMHostCluster) { throw 'VM is not on a cluster; cannot set highly available.' }; ")
+	}
+
 	if !data.PowerState.IsNull() && data.PowerState.ValueString() != "" {
 		desired := strings.ToLower(data.PowerState.ValueString())
 		switch desired {
@@ -268,6 +272,9 @@ func buildUpdateScript(plan, state virtualMachineResourceModel) string {
 	name := escapeSingleQuotes(plan.Name.ValueString())
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; ", name))
+	if !plan.HighlyAvailable.IsNull() && plan.HighlyAvailable.ValueBool() {
+		b.WriteString("if (-not $vm.VMHostCluster) { throw 'VM is not on a cluster; cannot set highly available.' }; ")
+	}
 
 	setArgs := []string{"-VM $vm"}
 
