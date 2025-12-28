@@ -11,6 +11,10 @@ provider "scvmm" {
   server = "vmm01.contoso.local"
 }
 
+data "scvmm_virtual_machine" "example" {
+  name = "demo-vm-01"
+}
+
 resource "scvmm_vm_checkpoint" "example" {
   vm_id       = data.scvmm_virtual_machine.example.id
   name        = "pre-update"
@@ -20,8 +24,4 @@ resource "scvmm_vm_checkpoint" "example" {
 data "scvmm_vm_checkpoint" "example" {
   vm_name = data.scvmm_virtual_machine.example.name
   name    = "pre-update"
-}
-
-data "scvmm_virtual_machine" "example" {
-  name = "demo-vm-01"
 }

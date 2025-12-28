@@ -11,6 +11,10 @@ provider "scvmm" {
   server = "vmm01.contoso.local"
 }
 
+data "scvmm_virtual_machine" "example" {
+  name = "demo-vm-01"
+}
+
 resource "scvmm_virtual_disk_drive" "example" {
   vm_id     = data.scvmm_virtual_machine.example.id
   bus_type  = "SCSI"
@@ -28,8 +32,4 @@ data "scvmm_virtual_disk_drive" "example" {
   vm_name = data.scvmm_virtual_machine.example.name
   bus     = 0
   lun     = 1
-}
-
-data "scvmm_virtual_machine" "example" {
-  name = "demo-vm-01"
 }
