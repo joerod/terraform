@@ -50,6 +50,10 @@ Creates a logical switch with `New-SCLogicalSwitch` and updates via `Set-SCLogic
 
 Adds/removes a virtual disk drive and expands its size using `New-SCVirtualDiskDrive` and `Expand-SCVirtualDiskDrive`. Use `move_path` to move the backing VHD with `Move-SCVirtualHardDisk`.
 
+### `scvmm_vm_checkpoint`
+
+Creates and removes VM checkpoints using `New-SCVMCheckpoint` and `Remove-SCVMCheckpoint`.
+
 ## Data sources
 
 ### `scvmm_virtual_machine`

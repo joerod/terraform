@@ -60,3 +60,9 @@ resource "scvmm_virtual_disk_drive" "data_disk" {
   dynamic   = true
   move_path = "D:\\VMs\\data"
 }
+
+resource "scvmm_vm_checkpoint" "example" {
+  vm_name     = scvmm_virtual_machine.example.name
+  name        = "pre-update"
+  description = "Before monthly update"
+}
