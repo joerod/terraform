@@ -30,6 +30,7 @@ type virtualMachineResourceModel struct {
 	MemoryMB     types.Int64  `tfsdk:"memory_mb"`
 	Description  types.String `tfsdk:"description"`
 	PowerState   types.String `tfsdk:"power_state"`
+	HighlyAvailable types.Bool `tfsdk:"highly_available"`
 	ID           types.String `tfsdk:"id"`
 	Status       types.String `tfsdk:"status"`
 	HostName     types.String `tfsdk:"host_name"`
@@ -82,6 +83,10 @@ func (r *virtualMachineResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"power_state": schema.StringAttribute{
 				Optional:    true,
 				Description: "Desired power state: Running or Stopped.",
+			},
+			"highly_available": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Make the VM highly available when hosted on a cluster.",
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -180,7 +185,7 @@ func (r *virtualMachineResource) ImportState(ctx context.Context, req resource.I
 func readVM(ctx context.Context, client *psClient, data *virtualMachineResourceModel, diags *diag.Diagnostics) {
 	name := data.Name.ValueString()
 	script := fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'", escapeSingleQuotes(name))
-	result, err := client.runPSJSON(ctx, script+"; $vm | Select-Object Name, ID, Status, HostName, CPUCount, MemoryMB, VMId, Owner, Description")
+	result, err := client.runPSJSON(ctx, script+"; $vm | Select-Object Name, ID, Status, HostName, CPUCount, MemoryMB, VMId, Owner, Description, HighlyAvailable")
 	if err != nil {
 		diags.AddError("PowerShell error", err.Error())
 		return
@@ -194,6 +199,7 @@ func readVM(ctx context.Context, client *psClient, data *virtualMachineResourceM
 	data.VMID = types.StringValue(stringValue(result, "VMId"))
 	data.Owner = types.StringValue(stringValue(result, "Owner"))
 	data.Description = types.StringValue(stringValue(result, "Description"))
+	data.HighlyAvailable = types.BoolValue(boolValue(result, "HighlyAvailable"))
 }
 
 func buildCreateScript(data virtualMachineResourceModel) string {
@@ -229,6 +235,9 @@ func buildCreateScript(data virtualMachineResourceModel) string {
 	}
 	if !data.MemoryMB.IsNull() && data.MemoryMB.ValueInt64() > 0 {
 		args = append(args, fmt.Sprintf("-MemoryMB %d", data.MemoryMB.ValueInt64()))
+	}
+	if !data.HighlyAvailable.IsNull() {
+		args = append(args, fmt.Sprintf("-HighlyAvailable $%t", data.HighlyAvailable.ValueBool()))
 	}
 	args = append(args, "-VMTemplate $vmTemplate")
 	if !data.CloudName.IsNull() && data.CloudName.ValueString() != "" {
@@ -273,6 +282,9 @@ func buildUpdateScript(plan, state virtualMachineResourceModel) string {
 	}
 	if !plan.MemoryMB.IsNull() && plan.MemoryMB.ValueInt64() != state.MemoryMB.ValueInt64() {
 		setArgs = append(setArgs, fmt.Sprintf("-MemoryMB %d", plan.MemoryMB.ValueInt64()))
+	}
+	if !plan.HighlyAvailable.IsNull() && plan.HighlyAvailable.ValueBool() != state.HighlyAvailable.ValueBool() {
+		setArgs = append(setArgs, fmt.Sprintf("-HighlyAvailable $%t", plan.HighlyAvailable.ValueBool()))
 	}
 
 	if len(setArgs) > 1 {

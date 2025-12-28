@@ -29,6 +29,8 @@ Create, update, and delete a VM. The resource uses:
 - `Remove-SCVirtualMachine`
 - `Start-SCVirtualMachine` / `Stop-SCVirtualMachine`
 
+Set `highly_available = true` to mark VMs as highly available when running on a cluster.
+
 Required/optional fields depend on your SCVMM environment and template requirements.
 
 ### `scvmm_host_cluster`

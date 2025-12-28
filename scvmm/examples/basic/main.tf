@@ -19,6 +19,7 @@ resource "scvmm_virtual_machine" "example" {
   cpu_count     = 2
   memory_mb     = 4096
   power_state   = "Running"
+  highly_available = true
 }
 
 data "scvmm_virtual_machine" "example" {
