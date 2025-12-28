@@ -66,3 +66,11 @@ resource "scvmm_vm_checkpoint" "example" {
   name        = "pre-update"
   description = "Before monthly update"
 }
+
+resource "scvmm_vm_subnet" "example" {
+  name            = "VMSubnet01"
+  vm_network_name = "VMNetwork01"
+  subnet_vlan_id  = 100
+  vm_subnet_id    = 1
+  max_ports       = 128
+}

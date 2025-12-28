@@ -64,6 +64,7 @@ func (p *scvmmProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewLogicalSwitchResource,
 		NewVirtualDiskDriveResource,
 		NewVMCheckpointResource,
+		NewVMSubnetResource,
 	}
 }
 

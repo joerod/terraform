@@ -54,6 +54,10 @@ Adds/removes a virtual disk drive and expands its size using `New-SCVirtualDiskD
 
 Creates and removes VM checkpoints using `New-SCVMCheckpoint` and `Remove-SCVMCheckpoint`.
 
+### `scvmm_vm_subnet`
+
+Creates VM subnets using `New-SCVMSubnet` and removes them with `Remove-SCVMSubnet`.
+
 ## Data sources
 
 ### `scvmm_virtual_machine`
