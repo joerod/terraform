@@ -80,6 +80,10 @@ Looks up a VM disk by VM name, bus, and LUN using `Get-SCVirtualDiskDrive`.
 
 Looks up a VM checkpoint by VM name and checkpoint name using `Get-SCVMCheckpoint`.
 
+### `scvmm_vm_host`
+
+Looks up a VM host by computer name using `Get-SCVMHost`.
+
 ## Limitations
 
 - Windows-only (PowerShell cmdlets are required)

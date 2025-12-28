@@ -55,6 +55,7 @@ func (p *scvmmProvider) DataSources(_ context.Context) []func() datasource.DataS
 		NewVirtualMachineDataSource,
 		NewVirtualDiskDriveDataSource,
 		NewVMCheckpointDataSource,
+		NewVMHostDataSource,
 	}
 }
 

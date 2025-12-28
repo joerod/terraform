@@ -16,3 +16,7 @@ resource "scvmm_vm_host" "example" {
   host_group_name = "All Hosts\\Compute"
   remove_on_delete = false
 }
+
+data "scvmm_vm_host" "example" {
+  computer_name = "hyperv01.contoso.local"
+}
