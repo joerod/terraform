@@ -34,6 +34,7 @@ type virtualMachineResourceModel struct {
 	HighlyAvailable types.Bool `tfsdk:"highly_available"`
 	HardwareProfileName types.String `tfsdk:"hardware_profile_name"`
 	GuestOSProfileName  types.String `tfsdk:"guest_os_profile_name"`
+	VMHostName  types.String `tfsdk:"vm_host_name"`
 	ID           types.String `tfsdk:"id"`
 	Status       types.String `tfsdk:"status"`
 	HostName     types.String `tfsdk:"host_name"`
@@ -99,6 +100,10 @@ func (r *virtualMachineResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Optional:    true,
 				Description: "Guest OS profile name to apply when creating or updating the VM.",
 			},
+			"vm_host_name": schema.StringAttribute{
+				Optional:    true,
+				Description: "Target VM host computer name for placement.",
+			},
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "SCVMM object ID.",
@@ -163,6 +168,11 @@ func (r *virtualMachineResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
+	if !plan.VMHostName.IsNull() && plan.VMHostName.ValueString() != state.VMHostName.ValueString() {
+		resp.Diagnostics.AddError("Unsupported change", "vm_host_name cannot be changed after creation")
+		return
+	}
+
 	script := buildUpdateScript(plan, state)
 	if script != "" {
 		if err := r.client.runPS(ctx, script); err != nil {
@@ -223,6 +233,9 @@ func buildCreateScript(data virtualMachineResourceModel) string {
 	name := escapeSingleQuotes(data.Name.ValueString())
 
 	var b strings.Builder
+	if !data.VMHostName.IsNull() && data.VMHostName.ValueString() != "" {
+		b.WriteString(fmt.Sprintf("$vmHost = Get-SCVMHost -ComputerName '%s'; ", escapeSingleQuotes(data.VMHostName.ValueString())))
+	}
 	b.WriteString("$vmTemplate = $null; ")
 	if !data.TemplateName.IsNull() && data.TemplateName.ValueString() != "" {
 		b.WriteString(fmt.Sprintf("$vmTemplate = Get-SCVMTemplate -Name '%s'; ", escapeSingleQuotes(data.TemplateName.ValueString())))
@@ -263,6 +276,9 @@ func buildCreateScript(data virtualMachineResourceModel) string {
 	if !data.GuestOSProfileName.IsNull() && data.GuestOSProfileName.ValueString() != "" {
 		b.WriteString(fmt.Sprintf("$guestProfile = Get-SCGuestOSProfile -Name '%s'; ", escapeSingleQuotes(data.GuestOSProfileName.ValueString())))
 		args = append(args, "-GuestOSProfile $guestProfile")
+	}
+	if !data.VMHostName.IsNull() && data.VMHostName.ValueString() != "" {
+		args = append(args, "-VMHost $vmHost")
 	}
 	args = append(args, "-VMTemplate $vmTemplate")
 	if !data.CloudName.IsNull() && data.CloudName.ValueString() != "" {

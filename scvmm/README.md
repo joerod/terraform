@@ -85,6 +85,10 @@ Looks up a VM checkpoint by VM name and checkpoint name using `Get-SCVMCheckpoin
 
 Looks up a VM host by computer name using `Get-SCVMHost`.
 
+### `scvmm_host_cluster`
+
+Looks up a host cluster by name and returns host names in the cluster.
+
 ## Limitations
 
 - Windows-only (PowerShell cmdlets are required)
