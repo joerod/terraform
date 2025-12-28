@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     scvmm = {
-      source  = "github.com/example/scvmm"
+      source  = "github.com/joerod/scvmm"
       version = "0.1.0"
     }
   }
