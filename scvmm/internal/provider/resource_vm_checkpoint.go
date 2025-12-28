@@ -22,6 +22,7 @@ type vmCheckpointResource struct {
 
 type vmCheckpointResourceModel struct {
 	VMName      types.String `tfsdk:"vm_name"`
+	VMID        types.String `tfsdk:"vm_id"`
 	Name        types.String `tfsdk:"name"`
 	Description types.String `tfsdk:"description"`
 	ID          types.String `tfsdk:"id"`
@@ -35,8 +36,12 @@ func (r *vmCheckpointResource) Schema(_ context.Context, _ resource.SchemaReques
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"vm_name": schema.StringAttribute{
-				Required:    true,
-				Description: "Virtual machine name.",
+				Optional:    true,
+				Description: "Virtual machine name. Required if vm_id is not set.",
+			},
+			"vm_id": schema.StringAttribute{
+				Optional:    true,
+				Description: "Virtual machine ID (GUID). Preferred over vm_name.",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -68,6 +73,11 @@ func (r *vmCheckpointResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	if data.VMID.IsNull() && data.VMName.IsNull() {
+		resp.Diagnostics.AddError("Missing VM reference", "Either vm_id or vm_name must be set.")
+		return
+	}
+
 	script := buildCheckpointCreateScript(data)
 	if err := r.client.runPS(ctx, script); err != nil {
 		resp.Diagnostics.AddError("PowerShell error", err.Error())
@@ -83,6 +93,11 @@ func (r *vmCheckpointResource) Read(ctx context.Context, req resource.ReadReques
 	var data vmCheckpointResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if data.VMID.IsNull() && data.VMName.IsNull() {
+		resp.Diagnostics.AddError("Missing VM reference", "Either vm_id or vm_name must be set.")
 		return
 	}
 
@@ -105,6 +120,11 @@ func (r *vmCheckpointResource) Update(ctx context.Context, req resource.UpdateRe
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan.VMID.IsNull() && plan.VMName.IsNull() {
+		resp.Diagnostics.AddError("Missing VM reference", "Either vm_id or vm_name must be set.")
 		return
 	}
 
@@ -133,6 +153,11 @@ func (r *vmCheckpointResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
+	if data.VMID.IsNull() && data.VMName.IsNull() {
+		resp.Diagnostics.AddError("Missing VM reference", "Either vm_id or vm_name must be set.")
+		return
+	}
+
 	script := buildCheckpointDeleteScript(data)
 	if err := r.client.runPS(ctx, script); err != nil {
 		resp.Diagnostics.AddError("PowerShell error", err.Error())
@@ -145,7 +170,7 @@ func (r *vmCheckpointResource) ImportState(ctx context.Context, req resource.Imp
 }
 
 func buildCheckpointCreateScript(data vmCheckpointResourceModel) string {
-	script := fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; ", escapeSingleQuotes(data.VMName.ValueString()))
+	script := buildCheckpointVMRef(data)
 	args := []string{"-VM $vm", fmt.Sprintf("-Name '%s'", escapeSingleQuotes(data.Name.ValueString()))}
 	if !data.Description.IsNull() && data.Description.ValueString() != "" {
 		args = append(args, fmt.Sprintf("-Description '%s'", escapeSingleQuotes(data.Description.ValueString())))
@@ -154,18 +179,18 @@ func buildCheckpointCreateScript(data vmCheckpointResourceModel) string {
 }
 
 func buildCheckpointDeleteScript(data vmCheckpointResourceModel) string {
-	return fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $cp = Get-SCVMCheckpoint -VM $vm | Where-Object { $_.Name -eq '%s' } | Select-Object -First 1; if ($cp) { Remove-SCVMCheckpoint -VMCheckpoint $cp -Force }", escapeSingleQuotes(data.VMName.ValueString()), escapeSingleQuotes(data.Name.ValueString()))
+	return buildCheckpointVMRef(data) + fmt.Sprintf("$cp = Get-SCVMCheckpoint -VM $vm | Where-Object { $_.Name -eq '%s' } | Select-Object -First 1; if ($cp) { Remove-SCVMCheckpoint -VMCheckpoint $cp -Force }", escapeSingleQuotes(data.Name.ValueString()))
 }
 
 func buildCheckpointUpdateScript(data vmCheckpointResourceModel) string {
 	if data.Description.IsNull() || data.Description.ValueString() == "" {
 		return ""
 	}
-	return fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $cp = Get-SCVMCheckpoint -VM $vm | Where-Object { $_.Name -eq '%s' } | Select-Object -First 1; if ($cp) { Set-SCVMCheckpoint -VMCheckpoint $cp -Description '%s' }", escapeSingleQuotes(data.VMName.ValueString()), escapeSingleQuotes(data.Name.ValueString()), escapeSingleQuotes(data.Description.ValueString()))
+	return buildCheckpointVMRef(data) + fmt.Sprintf("$cp = Get-SCVMCheckpoint -VM $vm | Where-Object { $_.Name -eq '%s' } | Select-Object -First 1; if ($cp) { Set-SCVMCheckpoint -VMCheckpoint $cp -Description '%s' }", escapeSingleQuotes(data.Name.ValueString()), escapeSingleQuotes(data.Description.ValueString()))
 }
 
 func readCheckpoint(ctx context.Context, client *psClient, data *vmCheckpointResourceModel, diags *diag.Diagnostics) bool {
-	script := fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $cp = Get-SCVMCheckpoint -VM $vm | Where-Object { $_.Name -eq '%s' } | Select-Object -First 1; if ($cp) { $cp | Select-Object Name, Description } else { @{} }", escapeSingleQuotes(data.VMName.ValueString()), escapeSingleQuotes(data.Name.ValueString()))
+	script := buildCheckpointVMRef(data) + fmt.Sprintf("$cp = Get-SCVMCheckpoint -VM $vm | Where-Object { $_.Name -eq '%s' } | Select-Object -First 1; if ($cp) { $cp | Select-Object Name, Description } else { @{} }", escapeSingleQuotes(data.Name.ValueString()))
 	result, err := client.runPSJSON(ctx, script)
 	if err != nil {
 		diags.AddError("PowerShell error", err.Error())
@@ -183,7 +208,17 @@ func readCheckpoint(ctx context.Context, client *psClient, data *vmCheckpointRes
 }
 
 func checkpointID(data vmCheckpointResourceModel) string {
+	if !data.VMID.IsNull() && data.VMID.ValueString() != "" {
+		return fmt.Sprintf("%s:%s", data.VMID.ValueString(), data.Name.ValueString())
+	}
 	return fmt.Sprintf("%s:%s", data.VMName.ValueString(), data.Name.ValueString())
+}
+
+func buildCheckpointVMRef(data vmCheckpointResourceModel) string {
+	if !data.VMID.IsNull() && data.VMID.ValueString() != "" {
+		return fmt.Sprintf("$vm = Get-SCVirtualMachine -ID '%s'; ", escapeSingleQuotes(data.VMID.ValueString()))
+	}
+	return fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; ", escapeSingleQuotes(data.VMName.ValueString()))
 }
 
 var _ resource.Resource = (*vmCheckpointResource)(nil)

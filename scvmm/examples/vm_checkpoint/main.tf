@@ -12,12 +12,16 @@ provider "scvmm" {
 }
 
 resource "scvmm_vm_checkpoint" "example" {
-  vm_name     = "demo-vm-01"
+  vm_id       = data.scvmm_virtual_machine.example.id
   name        = "pre-update"
   description = "Before monthly update"
 }
 
 data "scvmm_vm_checkpoint" "example" {
-  vm_name = "demo-vm-01"
+  vm_name = data.scvmm_virtual_machine.example.name
   name    = "pre-update"
+}
+
+data "scvmm_virtual_machine" "example" {
+  name = "demo-vm-01"
 }

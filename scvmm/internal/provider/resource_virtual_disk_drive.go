@@ -23,6 +23,7 @@ type virtualDiskDriveResource struct {
 
 type virtualDiskDriveResourceModel struct {
 	VMName     types.String `tfsdk:"vm_name"`
+	VMID       types.String `tfsdk:"vm_id"`
 	BusType    types.String `tfsdk:"bus_type"`
 	Bus        types.Int64  `tfsdk:"bus"`
 	LUN        types.Int64  `tfsdk:"lun"`
@@ -43,8 +44,12 @@ func (r *virtualDiskDriveResource) Schema(_ context.Context, _ resource.SchemaRe
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"vm_name": schema.StringAttribute{
-				Required:    true,
-				Description: "Virtual machine name.",
+				Optional:    true,
+				Description: "Virtual machine name. Required if vm_id is not set.",
+			},
+			"vm_id": schema.StringAttribute{
+				Optional:    true,
+				Description: "Virtual machine ID (GUID). Preferred over vm_name.",
 			},
 			"bus_type": schema.StringAttribute{
 				Optional:    true,
@@ -104,6 +109,11 @@ func (r *virtualDiskDriveResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
+	if data.VMID.IsNull() && data.VMName.IsNull() {
+		resp.Diagnostics.AddError("Missing VM reference", "Either vm_id or vm_name must be set.")
+		return
+	}
+
 	script := buildVirtualDiskDriveCreateScript(data)
 	if err := r.client.runPS(ctx, script); err != nil {
 		resp.Diagnostics.AddError("PowerShell error", err.Error())
@@ -122,6 +132,11 @@ func (r *virtualDiskDriveResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
+	if data.VMID.IsNull() && data.VMName.IsNull() {
+		resp.Diagnostics.AddError("Missing VM reference", "Either vm_id or vm_name must be set.")
+		return
+	}
+
 	readVirtualDiskDrive(ctx, r.client, &data, &resp.Diagnostics)
 	data.ID = types.StringValue(diskID(data))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -133,6 +148,11 @@ func (r *virtualDiskDriveResource) Update(ctx context.Context, req resource.Upda
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan.VMID.IsNull() && plan.VMName.IsNull() {
+		resp.Diagnostics.AddError("Missing VM reference", "Either vm_id or vm_name must be set.")
 		return
 	}
 
@@ -166,6 +186,11 @@ func (r *virtualDiskDriveResource) Delete(ctx context.Context, req resource.Dele
 	var data virtualDiskDriveResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if data.VMID.IsNull() && data.VMName.IsNull() {
+		resp.Diagnostics.AddError("Missing VM reference", "Either vm_id or vm_name must be set.")
 		return
 	}
 
@@ -211,23 +236,23 @@ func buildVirtualDiskDriveCreateScript(data virtualDiskDriveResourceModel) strin
 		args = append(args, "-Dynamic")
 	}
 
-	return fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; New-SCVirtualDiskDrive %s; ", escapeSingleQuotes(data.VMName.ValueString()), strings.Join(args, " "))
+	return buildVMRefScript(data) + "New-SCVirtualDiskDrive " + strings.Join(args, " ") + "; "
 }
 
 func buildVirtualDiskDriveExpandScript(data virtualDiskDriveResourceModel) string {
-	return fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1; if ($disk) { Expand-SCVirtualDiskDrive -VirtualDiskDrive $disk -VirtualHardDiskSizeGB %d }", escapeSingleQuotes(data.VMName.ValueString()), data.Bus.ValueInt64(), data.LUN.ValueInt64(), data.SizeGB.ValueInt64())
+	return buildVMRefScript(data) + fmt.Sprintf("$disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1; if ($disk) { Expand-SCVirtualDiskDrive -VirtualDiskDrive $disk -VirtualHardDiskSizeGB %d }", data.Bus.ValueInt64(), data.LUN.ValueInt64(), data.SizeGB.ValueInt64())
 }
 
 func buildVirtualDiskDriveDeleteScript(data virtualDiskDriveResourceModel) string {
-	return fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1; if ($disk) { Remove-SCVirtualDiskDrive -VirtualDiskDrive $disk -Force }", escapeSingleQuotes(data.VMName.ValueString()), data.Bus.ValueInt64(), data.LUN.ValueInt64())
+	return buildVMRefScript(data) + fmt.Sprintf("$disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1; if ($disk) { Remove-SCVirtualDiskDrive -VirtualDiskDrive $disk -Force }", data.Bus.ValueInt64(), data.LUN.ValueInt64())
 }
 
 func buildVirtualDiskDriveMoveScript(data virtualDiskDriveResourceModel) string {
-	return fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1; if ($disk -and $disk.VirtualHardDisk) { Move-SCVirtualHardDisk -VirtualHardDisk $disk.VirtualHardDisk -Path '%s' }", escapeSingleQuotes(data.VMName.ValueString()), data.Bus.ValueInt64(), data.LUN.ValueInt64(), escapeSingleQuotes(data.MovePath.ValueString()))
+	return buildVMRefScript(data) + fmt.Sprintf("$disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1; if ($disk -and $disk.VirtualHardDisk) { Move-SCVirtualHardDisk -VirtualHardDisk $disk.VirtualHardDisk -Path '%s' }", data.Bus.ValueInt64(), data.LUN.ValueInt64(), escapeSingleQuotes(data.MovePath.ValueString()))
 }
 
 func readVirtualDiskDrive(ctx context.Context, client *psClient, data *virtualDiskDriveResourceModel, diags *diag.Diagnostics) {
-	script := fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1", escapeSingleQuotes(data.VMName.ValueString()), data.Bus.ValueInt64(), data.LUN.ValueInt64())
+	script := buildVMRefScript(data) + fmt.Sprintf("$disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1", data.Bus.ValueInt64(), data.LUN.ValueInt64())
 	result, err := client.runPSJSON(ctx, script+"; $disk | Select-Object Bus, LUN, VirtualHardDiskSize, FileName, @{Name='VHDLocation';Expression={$_.VirtualHardDisk.Location}}")
 	if err != nil {
 		diags.AddError("PowerShell error", err.Error())
@@ -251,7 +276,17 @@ func readVirtualDiskDrive(ctx context.Context, client *psClient, data *virtualDi
 }
 
 func diskID(data virtualDiskDriveResourceModel) string {
+	if !data.VMID.IsNull() && data.VMID.ValueString() != "" {
+		return fmt.Sprintf("%s:%d:%d", data.VMID.ValueString(), data.Bus.ValueInt64(), data.LUN.ValueInt64())
+	}
 	return fmt.Sprintf("%s:%d:%d", data.VMName.ValueString(), data.Bus.ValueInt64(), data.LUN.ValueInt64())
+}
+
+func buildVMRefScript(data virtualDiskDriveResourceModel) string {
+	if !data.VMID.IsNull() && data.VMID.ValueString() != "" {
+		return fmt.Sprintf("$vm = Get-SCVirtualMachine -ID '%s'; ", escapeSingleQuotes(data.VMID.ValueString()))
+	}
+	return fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; ", escapeSingleQuotes(data.VMName.ValueString()))
 }
 
 var _ resource.Resource = (*virtualDiskDriveResource)(nil)

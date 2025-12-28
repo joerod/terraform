@@ -12,7 +12,7 @@ provider "scvmm" {
 }
 
 resource "scvmm_virtual_disk_drive" "example" {
-  vm_name   = "demo-vm-01"
+  vm_id     = data.scvmm_virtual_machine.example.id
   bus_type  = "SCSI"
   bus       = 0
   lun       = 1
@@ -25,7 +25,11 @@ resource "scvmm_virtual_disk_drive" "example" {
 }
 
 data "scvmm_virtual_disk_drive" "example" {
-  vm_name = "demo-vm-01"
+  vm_name = data.scvmm_virtual_machine.example.name
   bus     = 0
   lun     = 1
+}
+
+data "scvmm_virtual_machine" "example" {
+  name = "demo-vm-01"
 }
