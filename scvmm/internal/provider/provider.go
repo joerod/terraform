@@ -53,6 +53,8 @@ func (p *scvmmProvider) Configure(ctx context.Context, req provider.ConfigureReq
 func (p *scvmmProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewVirtualMachineDataSource,
+		NewVirtualDiskDriveDataSource,
+		NewVMCheckpointDataSource,
 	}
 }
 

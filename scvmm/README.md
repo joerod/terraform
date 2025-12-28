@@ -72,6 +72,14 @@ Creates VM subnets using `New-SCVMSubnet` and removes them with `Remove-SCVMSubn
 
 Looks up a VM by name using `Get-SCVirtualMachine`.
 
+### `scvmm_virtual_disk_drive`
+
+Looks up a VM disk by VM name, bus, and LUN using `Get-SCVirtualDiskDrive`.
+
+### `scvmm_vm_checkpoint`
+
+Looks up a VM checkpoint by VM name and checkpoint name using `Get-SCVMCheckpoint`.
+
 ## Limitations
 
 - Windows-only (PowerShell cmdlets are required)
