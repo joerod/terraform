@@ -74,3 +74,12 @@ resource "scvmm_vm_subnet" "example" {
   vm_subnet_id    = 1
   max_ports       = 128
 }
+
+# Import examples:
+# terraform import scvmm_virtual_machine.example demo-vm-01
+# terraform import scvmm_host_cluster.example Cluster01.contoso.local
+# terraform import scvmm_logical_switch.example LogicalSwitch01
+# terraform import scvmm_virtual_network.example VMNetwork01
+# terraform import scvmm_virtual_disk_drive.data_disk demo-vm-01:0:1
+# terraform import scvmm_vm_checkpoint.example demo-vm-01:pre-update
+# terraform import scvmm_vm_subnet.example VMSubnet01
