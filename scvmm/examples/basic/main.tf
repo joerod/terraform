@@ -20,6 +20,8 @@ resource "scvmm_virtual_machine" "example" {
   memory_mb     = 4096
   power_state   = "Running"
   highly_available = true
+  hardware_profile_name = "HWProfile01"
+  guest_os_profile_name = "Windows2025-GuestProfile"
 }
 
 data "scvmm_virtual_machine" "example" {

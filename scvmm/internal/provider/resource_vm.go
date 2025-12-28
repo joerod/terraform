@@ -31,6 +31,8 @@ type virtualMachineResourceModel struct {
 	Description  types.String `tfsdk:"description"`
 	PowerState   types.String `tfsdk:"power_state"`
 	HighlyAvailable types.Bool `tfsdk:"highly_available"`
+	HardwareProfileName types.String `tfsdk:"hardware_profile_name"`
+	GuestOSProfileName  types.String `tfsdk:"guest_os_profile_name"`
 	ID           types.String `tfsdk:"id"`
 	Status       types.String `tfsdk:"status"`
 	HostName     types.String `tfsdk:"host_name"`
@@ -87,6 +89,14 @@ func (r *virtualMachineResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"highly_available": schema.BoolAttribute{
 				Optional:    true,
 				Description: "Make the VM highly available when hosted on a cluster.",
+			},
+			"hardware_profile_name": schema.StringAttribute{
+				Optional:    true,
+				Description: "Hardware profile name to apply when creating or updating the VM.",
+			},
+			"guest_os_profile_name": schema.StringAttribute{
+				Optional:    true,
+				Description: "Guest OS profile name to apply when creating or updating the VM.",
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -185,7 +195,7 @@ func (r *virtualMachineResource) ImportState(ctx context.Context, req resource.I
 func readVM(ctx context.Context, client *psClient, data *virtualMachineResourceModel, diags *diag.Diagnostics) {
 	name := data.Name.ValueString()
 	script := fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'", escapeSingleQuotes(name))
-	result, err := client.runPSJSON(ctx, script+"; $vm | Select-Object Name, ID, Status, HostName, CPUCount, MemoryMB, VMId, Owner, Description, HighlyAvailable")
+	result, err := client.runPSJSON(ctx, script+"; $vm | Select-Object Name, ID, Status, HostName, CPUCount, MemoryMB, VMId, Owner, Description, HighlyAvailable, @{Name='HardwareProfileName';Expression={$_.HardwareProfile.Name}}, @{Name='GuestOSProfileName';Expression={$_.GuestOSProfile.Name}}")
 	if err != nil {
 		diags.AddError("PowerShell error", err.Error())
 		return
@@ -200,6 +210,12 @@ func readVM(ctx context.Context, client *psClient, data *virtualMachineResourceM
 	data.Owner = types.StringValue(stringValue(result, "Owner"))
 	data.Description = types.StringValue(stringValue(result, "Description"))
 	data.HighlyAvailable = types.BoolValue(boolValue(result, "HighlyAvailable"))
+	if v := stringValue(result, "HardwareProfileName"); v != "" {
+		data.HardwareProfileName = types.StringValue(v)
+	}
+	if v := stringValue(result, "GuestOSProfileName"); v != "" {
+		data.GuestOSProfileName = types.StringValue(v)
+	}
 }
 
 func buildCreateScript(data virtualMachineResourceModel) string {
@@ -238,6 +254,14 @@ func buildCreateScript(data virtualMachineResourceModel) string {
 	}
 	if !data.HighlyAvailable.IsNull() {
 		args = append(args, fmt.Sprintf("-HighlyAvailable $%t", data.HighlyAvailable.ValueBool()))
+	}
+	if !data.HardwareProfileName.IsNull() && data.HardwareProfileName.ValueString() != "" {
+		b.WriteString(fmt.Sprintf("$hwProfile = Get-SCHardwareProfile -Name '%s'; ", escapeSingleQuotes(data.HardwareProfileName.ValueString())))
+		args = append(args, "-HardwareProfile $hwProfile")
+	}
+	if !data.GuestOSProfileName.IsNull() && data.GuestOSProfileName.ValueString() != "" {
+		b.WriteString(fmt.Sprintf("$guestProfile = Get-SCGuestOSProfile -Name '%s'; ", escapeSingleQuotes(data.GuestOSProfileName.ValueString())))
+		args = append(args, "-GuestOSProfile $guestProfile")
 	}
 	args = append(args, "-VMTemplate $vmTemplate")
 	if !data.CloudName.IsNull() && data.CloudName.ValueString() != "" {
@@ -292,6 +316,14 @@ func buildUpdateScript(plan, state virtualMachineResourceModel) string {
 	}
 	if !plan.HighlyAvailable.IsNull() && plan.HighlyAvailable.ValueBool() != state.HighlyAvailable.ValueBool() {
 		setArgs = append(setArgs, fmt.Sprintf("-HighlyAvailable $%t", plan.HighlyAvailable.ValueBool()))
+	}
+	if !plan.HardwareProfileName.IsNull() && plan.HardwareProfileName.ValueString() != state.HardwareProfileName.ValueString() {
+		b.WriteString(fmt.Sprintf("$hwProfile = Get-SCHardwareProfile -Name '%s'; ", escapeSingleQuotes(plan.HardwareProfileName.ValueString())))
+		setArgs = append(setArgs, "-HardwareProfile $hwProfile")
+	}
+	if !plan.GuestOSProfileName.IsNull() && plan.GuestOSProfileName.ValueString() != state.GuestOSProfileName.ValueString() {
+		b.WriteString(fmt.Sprintf("$guestProfile = Get-SCGuestOSProfile -Name '%s'; ", escapeSingleQuotes(plan.GuestOSProfileName.ValueString())))
+		setArgs = append(setArgs, "-GuestOSProfile $guestProfile")
 	}
 
 	if len(setArgs) > 1 {

@@ -30,6 +30,7 @@ Create, update, and delete a VM. The resource uses:
 - `Start-SCVirtualMachine` / `Stop-SCVirtualMachine`
 
 Set `highly_available = true` to mark VMs as highly available when running on a cluster.
+Use `hardware_profile_name` or `guest_os_profile_name` to select profiles during VM creation or update.
 
 Required/optional fields depend on your SCVMM environment and template requirements.
 
