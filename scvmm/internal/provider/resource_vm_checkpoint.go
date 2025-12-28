@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -139,7 +141,7 @@ func (r *vmCheckpointResource) Delete(ctx context.Context, req resource.DeleteRe
 }
 
 func (r *vmCheckpointResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, req, resp, "id")
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 func buildCheckpointCreateScript(data vmCheckpointResourceModel) string {
@@ -162,7 +164,7 @@ func buildCheckpointUpdateScript(data vmCheckpointResourceModel) string {
 	return fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $cp = Get-SCVMCheckpoint -VM $vm | Where-Object { $_.Name -eq '%s' } | Select-Object -First 1; if ($cp) { Set-SCVMCheckpoint -VMCheckpoint $cp -Description '%s' }", escapeSingleQuotes(data.VMName.ValueString()), escapeSingleQuotes(data.Name.ValueString()), escapeSingleQuotes(data.Description.ValueString()))
 }
 
-func readCheckpoint(ctx context.Context, client *psClient, data *vmCheckpointResourceModel, diags *resource.Diagnostics) bool {
+func readCheckpoint(ctx context.Context, client *psClient, data *vmCheckpointResourceModel, diags *diag.Diagnostics) bool {
 	script := fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $cp = Get-SCVMCheckpoint -VM $vm | Where-Object { $_.Name -eq '%s' } | Select-Object -First 1; if ($cp) { $cp | Select-Object Name, Description } else { @{} }", escapeSingleQuotes(data.VMName.ValueString()), escapeSingleQuotes(data.Name.ValueString()))
 	result, err := client.runPSJSON(ctx, script)
 	if err != nil {

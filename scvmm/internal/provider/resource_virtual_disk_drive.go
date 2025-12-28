@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -175,7 +177,7 @@ func (r *virtualDiskDriveResource) Delete(ctx context.Context, req resource.Dele
 }
 
 func (r *virtualDiskDriveResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, req, resp, "id")
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 func buildVirtualDiskDriveCreateScript(data virtualDiskDriveResourceModel) string {
@@ -224,7 +226,7 @@ func buildVirtualDiskDriveMoveScript(data virtualDiskDriveResourceModel) string 
 	return fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1; if ($disk -and $disk.VirtualHardDisk) { Move-SCVirtualHardDisk -VirtualHardDisk $disk.VirtualHardDisk -Path '%s' }", escapeSingleQuotes(data.VMName.ValueString()), data.Bus.ValueInt64(), data.LUN.ValueInt64(), escapeSingleQuotes(data.MovePath.ValueString()))
 }
 
-func readVirtualDiskDrive(ctx context.Context, client *psClient, data *virtualDiskDriveResourceModel, diags *resource.Diagnostics) {
+func readVirtualDiskDrive(ctx context.Context, client *psClient, data *virtualDiskDriveResourceModel, diags *diag.Diagnostics) {
 	script := fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1", escapeSingleQuotes(data.VMName.ValueString()), data.Bus.ValueInt64(), data.LUN.ValueInt64())
 	result, err := client.runPSJSON(ctx, script+"; $disk | Select-Object Bus, LUN, VirtualHardDiskSize, FileName, @{Name='VHDLocation';Expression={$_.VirtualHardDisk.Location}}")
 	if err != nil {

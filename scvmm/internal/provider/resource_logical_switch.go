@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -160,10 +162,10 @@ func (r *logicalSwitchResource) Delete(ctx context.Context, req resource.DeleteR
 }
 
 func (r *logicalSwitchResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, req, resp, "name")
+	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
 }
 
-func readLogicalSwitch(ctx context.Context, client *psClient, data *logicalSwitchResourceModel, diags *resource.Diagnostics) {
+func readLogicalSwitch(ctx context.Context, client *psClient, data *logicalSwitchResourceModel, diags *diag.Diagnostics) {
 	script := fmt.Sprintf("$ls = Get-SCLogicalSwitch -Name '%s'", escapeSingleQuotes(data.Name.ValueString()))
 	result, err := client.runPSJSON(ctx, script+"; $ls | Select-Object Name, ID, Description, EnableSriov, EnablePacketDirect, SwitchUplinkMode, MinimumBandwidthMode")
 	if err != nil {

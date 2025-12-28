@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -164,10 +166,10 @@ func (r *hostClusterResource) Delete(ctx context.Context, req resource.DeleteReq
 }
 
 func (r *hostClusterResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, req, resp, "name")
+	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
 }
 
-func readHostCluster(ctx context.Context, client *psClient, data *hostClusterResourceModel, diags *resource.Diagnostics) {
+func readHostCluster(ctx context.Context, client *psClient, data *hostClusterResourceModel, diags *diag.Diagnostics) {
 	name := data.Name.ValueString()
 	script := fmt.Sprintf("$cluster = Get-SCVMHostCluster -Name '%s'", escapeSingleQuotes(name))
 	result, err := client.runPSJSON(ctx, script+"; $cluster | Select-Object Name, ID, Description")
@@ -240,7 +242,7 @@ func buildHostClusterUpdateScript(plan, state hostClusterResourceModel) string {
 	return b.String()
 }
 
-func addNodesToCluster(ctx context.Context, client *psClient, data hostClusterResourceModel, diags *resource.Diagnostics) {
+func addNodesToCluster(ctx context.Context, client *psClient, data hostClusterResourceModel, diags *diag.Diagnostics) {
 	nodes := listStrings(ctx, data.HostNodes, diags)
 	if diags.HasError() || len(nodes) == 0 {
 		return
@@ -252,7 +254,7 @@ func addNodesToCluster(ctx context.Context, client *psClient, data hostClusterRe
 	}
 }
 
-func addNodesToClusterUpdate(ctx context.Context, client *psClient, plan, state hostClusterResourceModel, diags *resource.Diagnostics) {
+func addNodesToClusterUpdate(ctx context.Context, client *psClient, plan, state hostClusterResourceModel, diags *diag.Diagnostics) {
 	planNodes := listStrings(ctx, plan.HostNodes, diags)
 	stateNodes := listStrings(ctx, state.HostNodes, diags)
 	if diags.HasError() || len(planNodes) == 0 {
@@ -294,7 +296,7 @@ func buildAddClusterNodesScript(data hostClusterResourceModel, nodes []string) s
 	return b.String()
 }
 
-func removeNodesFromClusterUpdate(ctx context.Context, client *psClient, plan hostClusterResourceModel, diags *resource.Diagnostics) {
+func removeNodesFromClusterUpdate(ctx context.Context, client *psClient, plan hostClusterResourceModel, diags *diag.Diagnostics) {
 	if plan.RemoveMissingNodes.IsNull() || !plan.RemoveMissingNodes.ValueBool() {
 		return
 	}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -138,7 +140,7 @@ func (r *vmSubnetResource) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 func (r *vmSubnetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, req, resp, "name")
+	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
 }
 
 func buildVMSubnetCreateScript(data vmSubnetResourceModel) string {
@@ -191,7 +193,7 @@ func buildVMSubnetDeleteScript(data vmSubnetResourceModel) string {
 	return fmt.Sprintf("$vmnet = Get-SCVMNetwork -Name '%s'; $subnet = Get-SCVMSubnet -VMNetwork $vmnet | Where-Object { $_.Name -eq '%s' } | Select-Object -First 1; if ($subnet) { Remove-SCVMSubnet -VMSubnet $subnet -Force }", escapeSingleQuotes(data.VMNetworkName.ValueString()), escapeSingleQuotes(data.Name.ValueString()))
 }
 
-func readVMSubnet(ctx context.Context, client *psClient, data *vmSubnetResourceModel, diags *resource.Diagnostics) {
+func readVMSubnet(ctx context.Context, client *psClient, data *vmSubnetResourceModel, diags *diag.Diagnostics) {
 	script := fmt.Sprintf("$vmnet = Get-SCVMNetwork -Name '%s'; $subnet = Get-SCVMSubnet -VMNetwork $vmnet | Where-Object { $_.Name -eq '%s' } | Select-Object -First 1", escapeSingleQuotes(data.VMNetworkName.ValueString()), escapeSingleQuotes(data.Name.ValueString()))
 	result, err := client.runPSJSON(ctx, script+"; $subnet | Select-Object Name, ID, Description, VMSubnetID, MaxNumberOfPorts")
 	if err != nil {

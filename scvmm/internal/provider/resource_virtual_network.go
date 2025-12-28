@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -133,10 +135,10 @@ func (r *virtualNetworkResource) Delete(ctx context.Context, req resource.Delete
 }
 
 func (r *virtualNetworkResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, req, resp, "name")
+	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
 }
 
-func readVirtualNetwork(ctx context.Context, client *psClient, data *virtualNetworkResourceModel, diags *resource.Diagnostics) {
+func readVirtualNetwork(ctx context.Context, client *psClient, data *virtualNetworkResourceModel, diags *diag.Diagnostics) {
 	script := fmt.Sprintf("$host = Get-SCVMHost -Name '%s'; $vnet = Get-SCVirtualNetwork -VMHost $host | Where-Object { $_.Name -eq '%s' } | Select-Object -First 1", escapeSingleQuotes(data.VMHostName.ValueString()), escapeSingleQuotes(data.Name.ValueString()))
 	result, err := client.runPSJSON(ctx, script+"; $vnet | Select-Object Name, ID, Description, HostBoundVlanId, BoundToVMHost")
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -189,7 +190,7 @@ func (r *virtualMachineResource) Delete(ctx context.Context, req resource.Delete
 }
 
 func (r *virtualMachineResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, req, resp, "name")
+	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
 }
 
 func readVM(ctx context.Context, client *psClient, data *virtualMachineResourceModel, diags *diag.Diagnostics) {
