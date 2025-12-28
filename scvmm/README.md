@@ -48,7 +48,7 @@ Creates a logical switch with `New-SCLogicalSwitch` and updates via `Set-SCLogic
 
 ### `scvmm_virtual_disk_drive`
 
-Adds/removes a virtual disk drive and expands its size using `New-SCVirtualDiskDrive` and `Expand-SCVirtualDiskDrive`.
+Adds/removes a virtual disk drive and expands its size using `New-SCVirtualDiskDrive` and `Expand-SCVirtualDiskDrive`. Use `move_path` to move the backing VHD with `Move-SCVirtualHardDisk`.
 
 ## Data sources
 

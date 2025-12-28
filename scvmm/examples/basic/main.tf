@@ -58,4 +58,5 @@ resource "scvmm_virtual_disk_drive" "data_disk" {
   size_gb   = 50
   file_name = "data-disk-01.vhdx"
   dynamic   = true
+  move_path = "D:\\VMs\\data"
 }

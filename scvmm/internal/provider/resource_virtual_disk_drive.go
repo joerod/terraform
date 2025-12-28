@@ -29,6 +29,7 @@ type virtualDiskDriveResourceModel struct {
 	Path       types.String `tfsdk:"path"`
 	Fixed      types.Bool   `tfsdk:"fixed"`
 	Dynamic    types.Bool   `tfsdk:"dynamic"`
+	MovePath   types.String `tfsdk:"move_path"`
 	ID         types.String `tfsdk:"id"`
 }
 
@@ -74,6 +75,10 @@ func (r *virtualDiskDriveResource) Schema(_ context.Context, _ resource.SchemaRe
 			"dynamic": schema.BoolAttribute{
 				Optional:    true,
 				Description: "Create a dynamically expanding disk.",
+			},
+			"move_path": schema.StringAttribute{
+				Optional:    true,
+				Description: "Move the underlying virtual hard disk to this path.",
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -132,6 +137,14 @@ func (r *virtualDiskDriveResource) Update(ctx context.Context, req resource.Upda
 	if plan.SizeGB.ValueInt64() < state.SizeGB.ValueInt64() {
 		resp.Diagnostics.AddError("Unsupported change", "disk size can only be increased")
 		return
+	}
+
+	if !plan.MovePath.IsNull() && plan.MovePath.ValueString() != "" && plan.MovePath.ValueString() != state.MovePath.ValueString() {
+		script := buildVirtualDiskDriveMoveScript(plan)
+		if err := r.client.runPS(ctx, script); err != nil {
+			resp.Diagnostics.AddError("PowerShell error", err.Error())
+			return
+		}
 	}
 
 	if plan.SizeGB.ValueInt64() > state.SizeGB.ValueInt64() {
@@ -207,9 +220,13 @@ func buildVirtualDiskDriveDeleteScript(data virtualDiskDriveResourceModel) strin
 	return fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1; if ($disk) { Remove-SCVirtualDiskDrive -VirtualDiskDrive $disk -Force }", escapeSingleQuotes(data.VMName.ValueString()), data.Bus.ValueInt64(), data.LUN.ValueInt64())
 }
 
+func buildVirtualDiskDriveMoveScript(data virtualDiskDriveResourceModel) string {
+	return fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1; if ($disk -and $disk.VirtualHardDisk) { Move-SCVirtualHardDisk -VirtualHardDisk $disk.VirtualHardDisk -Path '%s' }", escapeSingleQuotes(data.VMName.ValueString()), data.Bus.ValueInt64(), data.LUN.ValueInt64(), escapeSingleQuotes(data.MovePath.ValueString()))
+}
+
 func readVirtualDiskDrive(ctx context.Context, client *psClient, data *virtualDiskDriveResourceModel, diags *resource.Diagnostics) {
 	script := fmt.Sprintf("$vm = Get-SCVirtualMachine -Name '%s'; $disk = Get-SCVirtualDiskDrive -VM $vm | Where-Object { $_.Bus -eq %d -and $_.LUN -eq %d } | Select-Object -First 1", escapeSingleQuotes(data.VMName.ValueString()), data.Bus.ValueInt64(), data.LUN.ValueInt64())
-	result, err := client.runPSJSON(ctx, script+"; $disk | Select-Object Bus, LUN, VirtualHardDiskSize, FileName")
+	result, err := client.runPSJSON(ctx, script+"; $disk | Select-Object Bus, LUN, VirtualHardDiskSize, FileName, @{Name='VHDLocation';Expression={$_.VirtualHardDisk.Location}}")
 	if err != nil {
 		diags.AddError("PowerShell error", err.Error())
 		return
@@ -224,6 +241,10 @@ func readVirtualDiskDrive(ctx context.Context, client *psClient, data *virtualDi
 		if sizeBytes, err := strconv.ParseFloat(sizeRaw, 64); err == nil {
 			data.SizeGB = types.Int64Value(int64(sizeBytes / (1024 * 1024 * 1024)))
 		}
+	}
+
+	if v := stringValue(result, "VHDLocation"); v != "" {
+		data.MovePath = types.StringValue(v)
 	}
 }
 
