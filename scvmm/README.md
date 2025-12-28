@@ -77,9 +77,16 @@ go mod tidy
 go build
 ```
 
-## Example
+## Examples
 
-See `examples/basic`.
+- `examples/basic`
+- `examples/virtual_machine`
+- `examples/host_cluster`
+- `examples/logical_switch`
+- `examples/virtual_network`
+- `examples/virtual_disk_drive`
+- `examples/vm_checkpoint`
+- `examples/vm_subnet`
 
 ## Import Examples
 
