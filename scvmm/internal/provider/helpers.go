@@ -55,3 +55,24 @@ func listStrings(ctx context.Context, list types.List, diags *diag.Diagnostics) 
 func stringSliceEqual(a, b []string) bool {
 	return reflect.DeepEqual(a, b)
 }
+
+func stringSliceValue(m map[string]interface{}, key string) []string {
+	if v, ok := m[key]; ok && v != nil {
+		switch t := v.(type) {
+		case []interface{}:
+			out := make([]string, 0, len(t))
+			for _, item := range t {
+				out = append(out, fmt.Sprintf("%v", item))
+			}
+			return out
+		case []string:
+			return t
+		case string:
+			if t == "" {
+				return nil
+			}
+			return []string{t}
+		}
+	}
+	return nil
+}

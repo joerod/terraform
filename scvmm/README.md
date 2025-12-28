@@ -33,7 +33,7 @@ Required/optional fields depend on your SCVMM environment and template requireme
 
 ### `scvmm_host_cluster`
 
-Adds or updates a host cluster in SCVMM using `Add-SCVMHostCluster` and `Set-SCVMHostCluster`. Optional `host_nodes` will add nodes with `Add-SCVMHost`.
+Adds or updates a host cluster in SCVMM using `Add-SCVMHostCluster` and `Set-SCVMHostCluster`. Optional `host_nodes` will add nodes with `Add-SCVMHost`. Use `remove_missing_nodes` to remove cluster nodes not listed.
 
 ### `scvmm_virtual_network`
 
@@ -41,7 +41,7 @@ Creates a host-bound virtual network with `New-SCVirtualNetwork` and updates via
 
 ### `scvmm_logical_switch`
 
-Creates a logical switch with `New-SCLogicalSwitch` and updates via `Set-SCLogicalSwitch`. You can attach extensions by name.
+Creates a logical switch with `New-SCLogicalSwitch` and updates via `Set-SCLogicalSwitch`. You can attach extensions by name or remove all extensions.
 
 ### `scvmm_virtual_disk_drive`
 

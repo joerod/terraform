@@ -30,12 +30,14 @@ resource "scvmm_host_cluster" "example" {
   vm_host_group = "All Hosts"
   run_as_account = "Contoso\\vmm-runas"
   host_nodes    = ["hyperv01.contoso.local", "hyperv02.contoso.local"]
+  remove_missing_nodes = true
 }
 
 resource "scvmm_logical_switch" "example" {
   name                  = "LogicalSwitch01"
   minimum_bandwidth_mode = "Default"
   virtual_switch_extensions = ["Microsoft NDIS Capture", "Extensibility Example"]
+  remove_all_extensions = false
 }
 
 resource "scvmm_virtual_network" "example" {

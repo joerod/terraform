@@ -26,6 +26,7 @@ type logicalSwitchResourceModel struct {
 	SwitchUplinkMode     types.String `tfsdk:"switch_uplink_mode"`
 	MinimumBandwidthMode types.String `tfsdk:"minimum_bandwidth_mode"`
 	VirtualSwitchExtensions types.List `tfsdk:"virtual_switch_extensions"`
+	RemoveAllExtensions  types.Bool   `tfsdk:"remove_all_extensions"`
 	ID                   types.String `tfsdk:"id"`
 }
 
@@ -64,6 +65,10 @@ func (r *logicalSwitchResource) Schema(_ context.Context, _ resource.SchemaReque
 				Optional:    true,
 				ElementType: types.StringType,
 				Description: "Virtual switch extension names to attach.",
+			},
+			"remove_all_extensions": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Remove all virtual switch extensions from the logical switch.",
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -197,7 +202,7 @@ func buildLogicalSwitchCreateScript(data logicalSwitchResourceModel, exts []stri
 	b.WriteString(strings.Join(args, " "))
 	b.WriteString("; ")
 
-	if len(exts) > 0 {
+	if len(exts) > 0 && (data.RemoveAllExtensions.IsNull() || !data.RemoveAllExtensions.ValueBool()) {
 		b.WriteString("$exts = @(); ")
 		for _, name := range exts {
 			b.WriteString(fmt.Sprintf("$ext = Get-SCVirtualSwitchExtension -Name '%s'; if ($ext) { $exts += $ext }; ", escapeSingleQuotes(name)))
@@ -205,6 +210,12 @@ func buildLogicalSwitchCreateScript(data logicalSwitchResourceModel, exts []stri
 		b.WriteString("if ($exts.Count -gt 0) { Set-SCLogicalSwitch -LogicalSwitch (Get-SCLogicalSwitch -Name '")
 		b.WriteString(escapeSingleQuotes(data.Name.ValueString()))
 		b.WriteString("') -VirtualSwitchExtensions $exts; }; ")
+	}
+
+	if !data.RemoveAllExtensions.IsNull() && data.RemoveAllExtensions.ValueBool() {
+		b.WriteString("Set-SCLogicalSwitch -LogicalSwitch (Get-SCLogicalSwitch -Name '")
+		b.WriteString(escapeSingleQuotes(data.Name.ValueString()))
+		b.WriteString("') -RemoveAllExtensions; ")
 	}
 
 	return b.String()
@@ -237,12 +248,16 @@ func buildLogicalSwitchUpdateScript(plan, state logicalSwitchResourceModel, plan
 		b.WriteString("; ")
 	}
 
-	if len(planExts) > 0 && !stringSliceEqual(planExts, stateExts) {
+	if len(planExts) > 0 && !stringSliceEqual(planExts, stateExts) && (plan.RemoveAllExtensions.IsNull() || !plan.RemoveAllExtensions.ValueBool()) {
 		b.WriteString("$exts = @(); ")
 		for _, name := range planExts {
 			b.WriteString(fmt.Sprintf("$ext = Get-SCVirtualSwitchExtension -Name '%s'; if ($ext) { $exts += $ext }; ", escapeSingleQuotes(name)))
 		}
 		b.WriteString("if ($exts.Count -gt 0) { Set-SCLogicalSwitch -LogicalSwitch $ls -VirtualSwitchExtensions $exts; }; ")
+	}
+
+	if !plan.RemoveAllExtensions.IsNull() && plan.RemoveAllExtensions.ValueBool() {
+		b.WriteString("Set-SCLogicalSwitch -LogicalSwitch $ls -RemoveAllExtensions; ")
 	}
 
 	return b.String()

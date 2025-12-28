@@ -28,6 +28,7 @@ type hostClusterResourceModel struct {
 	RemoteConnectPort    types.Int64  `tfsdk:"remote_connect_port"`
 	EnableLiveMigration  types.Bool   `tfsdk:"enable_live_migration"`
 	HostNodes            types.List   `tfsdk:"host_nodes"`
+	RemoveMissingNodes   types.Bool   `tfsdk:"remove_missing_nodes"`
 	ID                   types.String `tfsdk:"id"`
 }
 
@@ -74,6 +75,10 @@ func (r *hostClusterResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Optional:    true,
 				ElementType: types.StringType,
 				Description: "Host nodes to add to the cluster.",
+			},
+			"remove_missing_nodes": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Remove cluster nodes not listed in host_nodes.",
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -138,6 +143,7 @@ func (r *hostClusterResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	addNodesToClusterUpdate(ctx, r.client, plan, state, &resp.Diagnostics)
+	removeNodesFromClusterUpdate(ctx, r.client, plan, &resp.Diagnostics)
 
 	readHostCluster(ctx, r.client, &plan, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -282,6 +288,62 @@ func buildAddClusterNodesScript(data hostClusterResourceModel, nodes []string) s
 	b.WriteString(fmt.Sprintf("$cred = Get-SCRunAsAccount -Name '%s'; ", escapeSingleQuotes(data.RunAsAccount.ValueString())))
 	for _, node := range nodes {
 		b.WriteString(fmt.Sprintf("Add-SCVMHost -ComputerName '%s' -VMHostCluster $cluster -Credential $cred; ", escapeSingleQuotes(node)))
+	}
+	return b.String()
+}
+
+func removeNodesFromClusterUpdate(ctx context.Context, client *psClient, plan hostClusterResourceModel, diags *resource.Diagnostics) {
+	if plan.RemoveMissingNodes.IsNull() || !plan.RemoveMissingNodes.ValueBool() {
+		return
+	}
+
+	planNodes := listStrings(ctx, plan.HostNodes, diags)
+	if diags.HasError() || len(planNodes) == 0 {
+		return
+	}
+
+	currentNodes, err := fetchClusterNodes(ctx, client, plan.Name.ValueString())
+	if err != nil {
+		diags.AddError("PowerShell error", err.Error())
+		return
+	}
+
+	keep := make(map[string]struct{}, len(planNodes))
+	for _, n := range planNodes {
+		keep[strings.ToLower(n)] = struct{}{}
+	}
+
+	var remove []string
+	for _, n := range currentNodes {
+		if _, ok := keep[strings.ToLower(n)]; !ok {
+			remove = append(remove, n)
+		}
+	}
+
+	if len(remove) == 0 {
+		return
+	}
+
+	script := buildRemoveClusterNodesScript(remove)
+	if err := client.runPS(ctx, script); err != nil {
+		diags.AddError("PowerShell error", err.Error())
+	}
+}
+
+func fetchClusterNodes(ctx context.Context, client *psClient, clusterName string) ([]string, error) {
+	script := fmt.Sprintf("$cluster = Get-SCVMHostCluster -Name '%s'; $nodes = Get-SCVMHost -VMHostCluster $cluster | Select-Object -ExpandProperty ComputerName; @{Names=$nodes} | ConvertTo-Json -Depth 3", escapeSingleQuotes(clusterName))
+	result, err := client.runPSJSON(ctx, script)
+	if err != nil {
+		return nil, err
+	}
+
+	return stringSliceValue(result, "Names"), nil
+}
+
+func buildRemoveClusterNodesScript(nodes []string) string {
+	var b strings.Builder
+	for _, node := range nodes {
+		b.WriteString(fmt.Sprintf("$host = Get-SCVMHost -ComputerName '%s'; if ($host) { Remove-SCVMHost -VMHost $host -Force }; ", escapeSingleQuotes(node)))
 	}
 	return b.String()
 }
