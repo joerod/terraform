@@ -49,6 +49,11 @@ Adds or updates a host cluster in SCVMM using `Add-SCVMHostCluster` and `Set-SCV
 ### `scvmm_virtual_network`
 
 Creates a host-bound virtual network with `New-SCVirtualNetwork` and updates via `Set-SCVirtualNetwork`.
+Prefer setting `vm_host_name` from `data.scvmm_vm_host`.
+
+### `scvmm_vm_network_adapter`
+
+Adds or removes a VM network adapter using `New-SCVirtualNetworkAdapter` and `Remove-SCVirtualNetworkAdapter`.
 
 ### `scvmm_logical_switch`
 
@@ -111,6 +116,7 @@ go build
 - `examples/host_cluster`
 - `examples/logical_switch`
 - `examples/virtual_network`
+- `examples/vm_network_adapter`
 - `examples/virtual_disk_drive`
 - `examples/vm_checkpoint`
 - `examples/vm_subnet`

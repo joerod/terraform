@@ -67,6 +67,7 @@ func (p *scvmmProvider) Resources(_ context.Context) []func() resource.Resource 
 		NewVMHostResource,
 		NewHostClusterResource,
 		NewVirtualNetworkResource,
+		NewVMNetworkAdapterResource,
 		NewLogicalSwitchResource,
 		NewVirtualDiskDriveResource,
 		NewVMCheckpointResource,
