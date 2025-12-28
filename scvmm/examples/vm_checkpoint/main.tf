@@ -20,8 +20,3 @@ resource "scvmm_vm_checkpoint" "example" {
   name        = "pre-update"
   description = "Before monthly update"
 }
-
-data "scvmm_vm_checkpoint" "example" {
-  vm_name = data.scvmm_virtual_machine.example.name
-  name    = "pre-update"
-}

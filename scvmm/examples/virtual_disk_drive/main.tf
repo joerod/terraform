@@ -27,9 +27,3 @@ resource "scvmm_virtual_disk_drive" "example" {
   dynamic   = true
   move_path = "E:\\VMs\\data"
 }
-
-data "scvmm_virtual_disk_drive" "example" {
-  vm_name = data.scvmm_virtual_machine.example.name
-  bus     = 0
-  lun     = 1
-}
