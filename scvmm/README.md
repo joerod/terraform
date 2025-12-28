@@ -34,6 +34,14 @@ Use `hardware_profile_name` or `guest_os_profile_name` to select profiles during
 
 Required/optional fields depend on your SCVMM environment and template requirements.
 
+### `scvmm_host_group`
+
+Creates and removes host groups using `New-SCVMHostGroup` and `Remove-SCVMHostGroup`.
+
+### `scvmm_vm_host`
+
+Assigns a VM host to a host group using `Set-SCVMHost`. Optionally removes the host from VMM on destroy.
+
 ### `scvmm_host_cluster`
 
 Adds or updates a host cluster in SCVMM using `Add-SCVMHostCluster` and `Set-SCVMHostCluster`. Optional `host_nodes` will add nodes with `Add-SCVMHost`. Use `remove_missing_nodes` to remove cluster nodes not listed.
@@ -81,6 +89,8 @@ go build
 
 - `examples/basic`
 - `examples/virtual_machine`
+- `examples/host_group`
+- `examples/vm_host`
 - `examples/host_cluster`
 - `examples/logical_switch`
 - `examples/virtual_network`
@@ -92,6 +102,8 @@ go build
 
 ```bash
 terraform import scvmm_virtual_machine.example demo-vm-01
+terraform import scvmm_host_group.example All Hosts\\Compute
+terraform import scvmm_vm_host.example hyperv01.contoso.local
 terraform import scvmm_host_cluster.example Cluster01.contoso.local
 terraform import scvmm_logical_switch.example LogicalSwitch01
 terraform import scvmm_virtual_network.example VMNetwork01

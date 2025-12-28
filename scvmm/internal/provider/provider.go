@@ -59,6 +59,8 @@ func (p *scvmmProvider) DataSources(_ context.Context) []func() datasource.DataS
 func (p *scvmmProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewVirtualMachineResource,
+		NewHostGroupResource,
+		NewVMHostResource,
 		NewHostClusterResource,
 		NewVirtualNetworkResource,
 		NewLogicalSwitchResource,
